@@ -54,8 +54,8 @@ class BookingController extends Controller
      */
     public function show($id)
     {
-        $job = $this->repository->with('translatorJobRel.user')->find($id);
-
+        //$job = $this->repository->with('translatorJobRel.user')->find($id);
+        $job = $this->find($id);
         return response($job);
     }
 
@@ -66,7 +66,9 @@ class BookingController extends Controller
     public function store(Request $request)
     {
         $data = $request->all();
-
+        $request->validate([
+            // Need to add validation for request attributes
+        ]);
         $response = $this->repository->store($request->__authenticatedUser, $data);
 
         return response($response);
@@ -81,6 +83,9 @@ class BookingController extends Controller
     public function update($id, Request $request)
     {
         $data = $request->all();
+        $request->validate([
+            // Need to add validation for request attributes
+        ]);
         $cuser = $request->__authenticatedUser;
         $response = $this->repository->updateJob($id, array_except($data, ['_token', 'submit']), $cuser);
 
@@ -107,7 +112,7 @@ class BookingController extends Controller
      */
     public function getHistory(Request $request)
     {
-        if($user_id = $request->get('user_id')) {
+        if($request->has('user_id')) {
 
             $response = $this->repository->getUsersJobsHistory($user_id, $request);
             return response($response);

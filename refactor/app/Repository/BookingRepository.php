@@ -70,13 +70,18 @@ class BookingRepository extends BaseRepository
             $usertype = 'translator';
         }
         if ($jobs) {
-            foreach ($jobs as $jobitem) {
-                if ($jobitem->immediate == 'yes') {
-                    $emergencyJobs[] = $jobitem;
-                } else {
-                    $noramlJobs[] = $jobitem;
-                }
-            }
+            // foreach ($jobs as $jobitem) {
+            //     if ($jobitem->immediate == 'yes') {
+            //         $emergencyJobs[] = $jobitem;
+            //     } else {
+            //         $noramlJobs[] = $jobitem;
+            //     }
+            // }
+            // Refactored Code
+            $allJobs = $jobs->select('*')->groupBy('immediate')->get();
+            $emergencyJobs = $allJobs[0];
+            $noramlJobs = $allJobs[1];
+            
             $noramlJobs = collect($noramlJobs)->each(function ($item, $key) use ($user_id) {
                 $item['usercheck'] = Job::checkParticularJob($user_id, $item);
             })->sortBy('due')->all();
@@ -289,21 +294,23 @@ class BookingRepository extends BaseRepository
         $job = Job::findOrFail(@$data['user_email_job_id']);
         $job->user_email = @$data['user_email'];
         $job->reference = isset($data['reference']) ? $data['reference'] : '';
-        $user = $job->user()->get()->first();
+        //$user = $job->user()->get()->first();
+        $user =  $job->user()->first();
         if (isset($data['address'])) {
             $job->address = ($data['address'] != '') ? $data['address'] : $user->userMeta->address;
             $job->instructions = ($data['instructions'] != '') ? $data['instructions'] : $user->userMeta->instructions;
             $job->town = ($data['town'] != '') ? $data['town'] : $user->userMeta->city;
         }
         $job->save();
-
+        
         if (!empty($job->user_email)) {
             $email = $job->user_email;
-            $name = $user->name;
+           // $name = $user->name;
         } else {
             $email = $user->email;
-            $name = $user->name;
+            
         }
+        $name = $user->name;
         $subject = 'Vi har mottagit er tolkbokning. Bokningsnr: #' . $job->id;
         $send_data = [
             'user' => $user,
@@ -1390,7 +1397,7 @@ class BookingRepository extends BaseRepository
             if ($job->status == 'pending' && Job::insertTranslatorJobRel($cuser->id, $job_id)) {
                 $job->status = 'assigned';
                 $job->save();
-                $user = $job->user()->get()->first();
+                $user = $job->user()->first();
                 $mailer = new AppMailer();
 
                 if (!empty($job->user_email)) {
@@ -1523,7 +1530,7 @@ class BookingRepository extends BaseRepository
             }
         } else {
             if ($job->due->diffInHours(Carbon::now()) > 24) {
-                $customer = $job->user()->get()->first();
+                $customer = $job->user()->first();
                 if ($customer) {
                     $data = array();
                     $data['notification_type'] = 'job_cancelled';
@@ -1611,7 +1618,7 @@ class BookingRepository extends BaseRepository
         $job->status = 'completed';
         $job->session_time = $interval;
 
-        $user = $job->user()->get()->first();
+        $user = $job->user()->first();
         if (!empty($job->user_email)) {
             $email = $job->user_email;
         } else {
